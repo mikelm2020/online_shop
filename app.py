@@ -26,21 +26,62 @@ def create_app(db_url=None):
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
     app.config["OPENAPI_URL_PREFIX"] = "/"
+
     app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
     app.config["OPENAPI_SWAGGER_UI_VERSION"] = "3.24.2"
     app.config["OPENAPI_SWAGGER_UI_URL"] = (
         "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/3.24.2/"
     )
+
+    app.config["OPENAPI_REDOC_PATH"] = "/redoc"
+    app.config["OPENAPI_REDOC_URL"] = (
+        "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"
+    )
+
+    app.config["OPENAPI_RAPIDOC_PATH"] = "/rapidoc"
+    app.config["OPENAPI_RAPIDOC_URL"] = "https://unpkg.com/rapidoc/dist/rapidoc-min.js"
+    app.config["OPENAPI_RAPIDOC_CONFIG"] = {"theme": "dark"}
+
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url or os.getenv(
         "DATABASE_URL", "sqlite:///data.db"
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["PROPAGATE_EXCEPTIONS"] = True
+    # Esquema de seguridad OAuth2
+    app.config["API_SPEC_OPTIONS"] = {
+        "components": {
+            "securitySchemes": {
+                "OAuth2PasswordBearer": {
+                    "type": "oauth2",
+                    "flows": {
+                        "password": {
+                            "tokenUrl": "/auth/login",  # Ruta para obtener el token JWT
+                            "scopes": {},
+                        }
+                    },
+                }
+            }
+        },
+        "security": [{"OAuth2PasswordBearer": []}],
+    }
+    # app.config["API_SPEC_OPTIONS"] = {
+    #     "components": {
+    #         "securitySchemes": {
+    #             "BearerAuth": {
+    #                 "type": "http",
+    #                 "scheme": "bearer",
+    #                 "bearerFormat": "JWT",
+    #             }
+    #         }
+    #     },
+    #     "security": [{"BearerAuth": []}],
+    # }
+
     db.init_app(app)
     migrate = Migrate(app, db)  # noqa: F841
     api = Api(app)
 
-    app.config["JWT_SECRET_KEY"] = "jose"
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
     jwt = JWTManager(app)  # noqa: F841
 
     @jwt.token_in_blocklist_loader
